@@ -30,14 +30,12 @@ const BACKDROP_COLOR := Color(0.952, 0.937, 0.912)  # 与丝绸幕布同底的�
 const TEXTURE_YAW_DEG := 0.0
 const TEXTURE_FLIP_V := false
 
-# 机位表：[名称, 纬度, 经度, 缩放级别]；启动定位亚洲机位（默认 8 级）
-const PRESETS := [
-	["亚洲", 35.0, 105.0, 8],
-	["欧洲", 48.0, 15.0, 9],
-	["北美", 45.0, -100.0, 6],
-	["南美", -15.0, -60.0, 6],
-	["全球", 22.0, 105.0, 5],
-]
+# 启动机位：启动定位亚洲，无其他预设机位；大洲/组织对准走编组质心，
+# 大跨度编组切全球全景距离
+const START_LAT := 35.0
+const START_LON := 105.0
+const START_LEVEL := 8
+const GLOBAL_LEVEL := 5
 
 const ZOOM_MIN_DISTANCE := 1.12  # 级 10：贴地看国家（最近）
 const ZOOM_MAX_DISTANCE := 5.0  # 级 1：全球全景之外留空（最远）
@@ -141,13 +139,10 @@ var _press_time := 0
 var _touch_tap_index := -1
 var _touch_tap_pos := Vector2.ZERO
 var _touch_tap_time := 0
-var _active_preset := -1  # -1 = 自由观察
 var _dragging := false
 var _tween: Tween
-# 触屏多点状态：index → 最近位置；捏合基线距离；捏合后未抬指前抑制单指旋转
+# 触屏多点状态：index → 最近位置
 var _touch_points := {}
-var _pinch_prev_dist := 0.0
-var _suppress_single := false
 
 
 func _ready() -> void:
@@ -170,7 +165,7 @@ func _ready() -> void:
 		preload("res://scripts/app_window.gd").apply_maximized(get_window())
 	_create_ui()
 	# 启动定位亚洲机位
-	place_camera(PRESETS[0][1], PRESETS[0][2], zoom_level_distance(PRESETS[0][3]))
+	place_camera(START_LAT, START_LON, zoom_level_distance(START_LEVEL))
 	# 默认选中国家（设计稿 v6：默认激活中国——高亮 + 面板行选中 + 详情展开）
 	if _countries != null and _china_index >= 0:
 		select_country(_china_index)
@@ -249,18 +244,6 @@ func place_camera(lat: float, lon: float, dist: float) -> void:
 	_apply()
 
 
-func jump_preset(index: int, animated := true) -> void:
-	# 机位跳转：注视点与距离缓动到位（命令动画；手动输入随时打断）
-	_active_preset = index
-	var target_lat := float(PRESETS[index][1])
-	var target_lon := float(PRESETS[index][2])
-	var target_dist := zoom_level_distance(int(PRESETS[index][3]))
-	if not animated:
-		place_camera(target_lat, target_lon, target_dist)
-		return
-	_animate_to(target_lat, target_lon, target_dist)
-
-
 func _animate_to(lat: float, lon: float, dist: float) -> void:
 	# 注视点与距离缓动（机位跳转与国家定位共用）；经度走最短路径
 	if _tween != null and _tween.is_valid():
@@ -273,10 +256,6 @@ func _animate_to(lat: float, lon: float, dist: float) -> void:
 	# 相机变换随缓动逐帧应用（tween 只改注视属性，不自动摆相机）；
 	# 缺此步画面静止不动，直到用户拖动触发 _apply 才瞬移到目标位
 	_tween.chain().tween_callback(_apply)
-
-
-func active_preset() -> int:
-	return _active_preset
 
 
 func selected_index() -> int:
@@ -321,26 +300,15 @@ func _handle_screen_touch(touch: InputEventScreenTouch) -> void:
 	if touch.pressed:
 		_touch_points[touch.index] = touch.position
 		_begin_manual()
-		if _touch_points.size() == 2:
-			_pinch_prev_dist = _pinch_distance()
-			_touch_tap_index = -1  # 第二指落下：单指 tap 作废
-		elif not _suppress_single:
-			# 单指按下记 tap 候选（位置/时刻），松开时按位移与时长判定
-			_touch_tap_index = touch.index
-			_touch_tap_pos = touch.position
-			_touch_tap_time = Time.get_ticks_msec()
+		# 单指按下记 tap 候选（位置/时刻），松开时按位移与时长判定
+		_touch_tap_index = touch.index
+		_touch_tap_pos = touch.position
+		_touch_tap_time = Time.get_ticks_msec()
 	elif not touch.canceled and _touch_points.has(touch.index):
 		_touch_points.erase(touch.index)
-		if _touch_points.size() < 2:
-			_pinch_prev_dist = 0.0
-			# 捏合结束：吸附到最近的缩放级别
-			distance = zoom_level_distance(level_of_distance(distance))
-			_apply()
-		# 双指捏合结束后，剩余手指需抬起再按下才恢复单指旋转，防跳变
-		_suppress_single = _touch_points.size() >= 1
 		if touch.index == _touch_tap_index:
 			_touch_tap_index = -1
-			if not _suppress_single and _is_tap(touch.position, _touch_tap_pos, _touch_tap_time):
+			if _is_tap(touch.position, _touch_tap_pos, _touch_tap_time):
 				_pick_at(touch.position)
 				# 触屏双击国家：旋转到正前方，缩放保持当前级别（与鼠标双击同语义）
 				if _selected >= 0 and touch.position.distance_to(_last_tap_pos) <= DOUBLE_TAP_MOVEMENT \
@@ -354,23 +322,8 @@ func _handle_screen_drag(drag: InputEventScreenDrag) -> void:
 	if not _touch_points.has(drag.index):
 		return
 	_touch_points[drag.index] = drag.position
-	if _touch_points.size() == 2:
-		var dist := _pinch_distance()
-		if _pinch_prev_dist > 0.0 and dist > 0.0:
-			# 触屏捏合：手势内连续，松手吸附级别
-			_begin_manual()
-			distance = clampf(distance * _pinch_prev_dist / dist, ZOOM_MIN_DISTANCE, ZOOM_MAX_DISTANCE)
-			_apply()
-		_pinch_prev_dist = dist
-	elif _touch_points.size() == 1 and not _suppress_single:
+	if _touch_points.size() == 1:
 		_rotate_by(drag.relative)  # 触屏单指拖动旋转
-
-
-func _pinch_distance() -> float:
-	var points: Array = _touch_points.values()
-	if points.size() < 2:
-		return 0.0
-	return (points[0] as Vector2).distance_to(points[1] as Vector2)
 
 
 func _is_tap(pos: Vector2, press_pos: Vector2, press_time: int) -> bool:
@@ -490,7 +443,6 @@ func visible_panel_rects() -> Dictionary:
 	var rects := {}
 	if _hud != null:
 		rects["slider"] = _hud._track_rect().merge(_hud._minus_rect()).merge(_hud._plus_rect())
-		rects["hint"] = _hud.hint_rect()
 	if _settings != null:
 		rects["gear"] = _settings.icon_rect()
 		if _settings.is_open():
@@ -547,11 +499,10 @@ func face_group(index: int) -> void:
 	# 跨好几个洲的编组）时切全球机位的距离才能看全，其余保持当前缩放级别
 	if _groups == null or index < 0 or index >= _groups.count:
 		return
-	_active_preset = -1
 	var centroid: Array = _groups.centroids[index]
 	var dist := distance
 	if _groups.spans[index] > GROUP_GLOBAL_SPAN:
-		dist = zoom_level_distance(int(PRESETS[4][3]))
+		dist = zoom_level_distance(GLOBAL_LEVEL)
 	_animate_to(centroid[1], centroid[0], dist)
 
 
@@ -560,7 +511,6 @@ func face_country(index: int) -> void:
 	# （切到小国由用户自己放大，双击不擅动缩放）
 	if _countries == null or index < 0 or index >= _countries.count:
 		return
-	_active_preset = -1
 	var centroid: Array = _countries.centroids[index]
 	_animate_to(centroid[1], centroid[0], distance)
 
@@ -750,11 +700,9 @@ func _ribbon_segment(st: SurfaceTool, a: Vector3, b: Vector3, half: float, radiu
 
 
 func _begin_manual() -> void:
-	# 手动输入打断机位跳转，进入自由观察
+	# 手动输入打断缓动，进入自由观察
 	if _tween != null and _tween.is_valid():
 		_tween.kill()
-	if _active_preset != -1:
-		_active_preset = -1
 
 
 func _rotate_by(relative: Vector2) -> void:

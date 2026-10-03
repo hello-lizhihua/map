@@ -4,7 +4,6 @@ extends Control
 ## 本层负责提示文本绘制与缩放级别回推（机位跳转/双击定位/捏合吸附后刷新滑块）。
 
 const UITheme := preload("res://addons/godot-element-plus/theme/theme.gd")
-const HINT_TEXT := "拖动旋转 · 滑块缩放"
 
 ## earth 注入：读取缩放级别回推滑块
 var main_node: Node = null
@@ -46,13 +45,6 @@ func _process(_delta: float) -> void:
 			_slider.set_value(level)
 
 
-func _draw() -> void:
-	# 操作提示（左下角小字）：描影垫底再画主体，浅幕布与深海面都可读
-	var size := get_viewport_rect().size
-	draw_string(_font, Vector2(21.0, size.y - 21.0), HINT_TEXT, HORIZONTAL_ALIGNMENT_LEFT, 460.0, 14, UITheme.HINT_HALO)
-	draw_string(_font, Vector2(20.0, size.y - 22.0), HINT_TEXT, HORIZONTAL_ALIGNMENT_LEFT, 460.0, 14, UITheme.HINT_COLOR)
-
-
 # ── 缩放滑块命中区（视口坐标，测试与截图管线契约）──────────────────
 
 
@@ -67,8 +59,3 @@ func _minus_rect() -> Rect2:
 func _plus_rect() -> Rect2:
 	return _slider._plus_rect()
 
-
-## 操作提示文字矩形（面板几何登记用：提示行外接）
-func hint_rect() -> Rect2:
-	var size := get_viewport_rect().size
-	return Rect2(Vector2(20.0, size.y - 36.0), Vector2(148.0, 20.0))

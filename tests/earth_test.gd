@@ -38,7 +38,7 @@ func _run() -> void:
 	# B1 启动定位亚洲机位：注视点与相机位置一致
 	var dir: Vector3 = earth.latlon_to_dir(35.0, 105.0)
 	_check(earth.facing_lat == 35.0 and earth.facing_lon == 105.0, "B1 启动注视亚洲", "lat=%s lon=%s" % [earth.facing_lat, earth.facing_lon])
-	_check(earth.get_node("Camera3D").global_position.distance_to(dir * earth.zoom_level_distance(earth.PRESETS[0][3])) < 0.001, "B1 相机在注视方向", "pos=%s" % earth.get_node("Camera3D").global_position)
+	_check(earth.get_node("Camera3D").global_position.distance_to(dir * earth.zoom_level_distance(earth.START_LEVEL)) < 0.001, "B1 相机在注视方向", "pos=%s" % earth.get_node("Camera3D").global_position)
 
 	# B2 拖动跟手：拖右 450px → 注视经度 -= 450*50/900 = 25 度；拖下 270px → 纬度 += 15 度
 	_mouse_press()
@@ -66,50 +66,40 @@ func _run() -> void:
 	_wheel(true)
 	_check(earth.distance == dist_wheel, "B4 滚轮不缩放（已废）", "dist %.3f -> %.3f" % [dist_wheel, earth.distance])
 
-	# B5 机位跳转（命令动画）：跳欧洲，缓动结束注视欧洲（数字键 1-5 机位已移除）
-	earth.jump_preset(1)
+	# B5 缓动对准（命令动画）：缓动到欧洲注视点，距离保持（对准入口为大洲/组织维度）
+	var dist_before_b5: float = earth.distance
+	earth._animate_to(48.0, 15.0, dist_before_b5)
 	await _wait_jump(earth)
-	_check(earth.active_preset() == 1, "B5 跳欧洲", "active=%d" % earth.active_preset())
-	_check(absf(earth.facing_lat - 48.0) < 0.01 and absf(wrapf(earth.facing_lon - 15.0, -180.0, 180.0)) < 0.01, "B5 注视欧洲", "lat=%.3f lon=%.3f" % [earth.facing_lat, earth.facing_lon])
-	_check(absf(earth.distance - earth.zoom_level_distance(earth.PRESETS[1][3])) < 0.01, "B5 欧洲距离", "dist=%.3f" % earth.distance)
+	_check(absf(earth.facing_lat - 48.0) < 0.01 and absf(wrapf(earth.facing_lon - 15.0, -180.0, 180.0)) < 0.01, "B5 缓动注视欧洲", "lat=%.3f lon=%.3f" % [earth.facing_lat, earth.facing_lon])
+	_check(absf(earth.distance - dist_before_b5) < 0.01, "B5 对准不改缩放", "dist=%.3f" % earth.distance)
 	var europe_cam: Vector3 = earth.latlon_to_dir(48.0, 15.0) * earth.distance
 	_check(earth.get_node("Camera3D").global_position.distance_to(europe_cam) < 0.001, "B5 欧洲相机随缓动到位", "cam=%s" % earth.get_node("Camera3D").global_position)
 
-	# B6 手动输入打断跳转：跳转途中拖动，缓动中止、进入自由观察
-	earth.jump_preset(2)
+	# B6 手动输入打断缓动：缓动途中拖动，缓动中止、进入自由观察
+	earth._animate_to(48.0, 15.0, earth.distance)
 	for i in 6:
 		await process_frame
 	_mouse_press()
 	_mouse_motion(Vector2(100, 0))
 	_mouse_release()
-	_check(earth.active_preset() == -1, "B6 拖动打断跳转", "active=%d" % earth.active_preset())
+	_check(not earth.is_jumping(), "B6 拖动打断缓动", "")
 	var lon_frozen: float = earth.facing_lon
 	for i in 40:
 		await process_frame
 	_check(earth.facing_lon == lon_frozen, "B6 打断后无残余滑动", "lon=%s" % earth.facing_lon)
 
-	# B7 触屏：单指拖动旋转 + 双指捏合缩放
+	# B7 触屏：单指拖动旋转（捏合缩放已废，缩放只用滑块）
 	var lat0: float = earth.facing_lat
 	_touch_press(7, Vector2(800, 450))
 	_touch_drag(7, Vector2(800, 450), Vector2(806, 462))
 	_touch_release(7, Vector2(806, 462))
 	_check(absf((earth.facing_lat - lat0) - 12.0 * 50.0 / 900.0) < 0.01, "B7 单指拖动旋转", "dlat=%.3f" % (earth.facing_lat - lat0))
-	var dist1: float = earth.distance
-	_touch_press(1, Vector2(600, 450))
-	_touch_press(2, Vector2(1000, 450))
-	_touch_drag(1, Vector2(600, 450), Vector2(500, 450))
-	_touch_release(1, Vector2(500, 450))
-	_touch_release(2, Vector2(1000, 450))
-	_check(earth.distance < dist1, "B7 双指张开拉近", "dist %.3f -> %.3f" % [dist1, earth.distance])
 
 	# B8 面板页签结构（机位 chips 已废：跳转由大洲维度下拉承载，键盘 1-5 已移除）
 	earth._create_ui(true)
 	var hud: Control = earth.get_node("EarthHud")
 	var panel_presets: Control = earth.get_node("EarthPanel")
 	_check(panel_presets._tabs.count() == 2 and panel_presets._tabs.active() == 0, "B8 面板页签国家默认激活", "n=%d" % panel_presets._tabs.count())
-	earth.jump_preset(3)
-	await _wait_jump(earth)
-	_check(earth.active_preset() == 3, "B8 跳全球", "active=%d" % earth.active_preset())
 
 	# C 组：国家选中（阶段二）
 	# C1 数据底座：177 国
@@ -252,7 +242,7 @@ func _run() -> void:
 			var nato_centroid: Array = groups.centroids[nato]
 			_check(absf(earth.facing_lat - nato_centroid[1]) < 0.01 and absf(wrapf(earth.facing_lon - nato_centroid[0], -180.0, 180.0)) < 0.01, "D4 对准北约区域中心", "lat=%.3f lon=%.3f" % [earth.facing_lat, earth.facing_lon])
 			_check(groups.spans[nato] > earth.GROUP_GLOBAL_SPAN, "D4 北约为大跨度", "span=%.3f" % groups.spans[nato])
-			_check(absf(earth.distance - earth.zoom_level_distance(int(earth.PRESETS[4][3]))) < 0.001, "D4 大跨度编组切全球机位", "dist=%.3f" % earth.distance)
+			_check(absf(earth.distance - earth.zoom_level_distance(earth.GLOBAL_LEVEL)) < 0.001, "D4 大跨度编组切全球机位", "dist=%.3f" % earth.distance)
 			earth.place_camera(35.0, 105.0, 2.1)
 			await process_frame
 			var baltic: int = groups.names.find("波罗的海三国")
@@ -484,9 +474,7 @@ func _run() -> void:
 		_check(earth.zoom_level() == 9, "H2 − 步进", "lv=%d" % earth.zoom_level())
 		_click_at(hud3._plus_rect().get_center())
 		_check(earth.zoom_level() == 10, "H2 ＋ 步进", "lv=%d" % earth.zoom_level())
-		earth.jump_preset(3)
-		await _wait_jump(earth)
-		_check(earth.zoom_level() == int(earth.PRESETS[3][3]), "H2 机位跳转级别同步", "lv=%d" % earth.zoom_level())
+
 
 
 		# I 组：面板新版式（维度下拉 + 排序 + 大洲强制分组）
@@ -589,7 +577,7 @@ func _run() -> void:
 
 		# J 组：面板机位行跳转 + 地形位移
 		var panel4: Control = earth.get_node("EarthPanel")
-		# J1 机位 chips 已废（跳转由大洲维度下拉与 jump_preset 承载，见 B8/H2）
+		# J1 机位 chips 已废（对准由大洲/组织维度下拉承载，见 D5）
 
 		# J2 地形位移：珠峰方向网格顶点高于球面，海洋顶点齐平
 		if earth._terrain_height != null:
@@ -640,7 +628,7 @@ func _run() -> void:
 					break
 				await process_frame
 		var rects_p1: Dictionary = earth.visible_panel_rects()
-		_check(rects_p1.has_all(["gear", "slider", "hint", "country_panel"]), "P1 默认态登记齐全", "keys=%s" % str(rects_p1.keys()))
+		_check(rects_p1.has_all(["gear", "slider", "country_panel"]), "P1 默认态登记齐全", "keys=%s" % str(rects_p1.keys()))
 		_check(earth.first_rect_overlap(rects_p1) == "", "P1 默认态面板互斥", "hit=%s" % earth.first_rect_overlap(rects_p1))
 		# P2 设置开（面板自动收起）：齿轮/滑块/提示/设置面板/圆形把手
 		settings_p.open_panel()

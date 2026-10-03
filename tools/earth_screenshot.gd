@@ -1,7 +1,7 @@
 extends Node
 ## 开发工具：按地球机位表截图，输出到 project-godot/screenshots/（git 忽略）。
 ## 运行：pnpm shots-earth（等价 godot --path . --position -3200,-3200 res://tools/earth_screenshot.tscn）
-## 机位参数与 scripts/earth/earth.gd 的 PRESETS 保持一致；asia-close 为诊断机位
+## asia-close 为诊断机位
 ## （国家级近距离核对纹理对准与清晰度，不属于机位表）；china-select 评审选中
 ## 高亮与右侧面板（选中中国，不缩放）。
 
