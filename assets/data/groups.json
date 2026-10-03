@@ -1,0 +1,299 @@
+{
+  "groups": [
+    {
+      "name": "北约",
+      "iso": [
+        "US",
+        "CA",
+        "IS",
+        "GB",
+        "FR",
+        "DE",
+        "NO",
+        "DK",
+        "NL",
+        "BE",
+        "LU",
+        "ES",
+        "PT",
+        "IT",
+        "GR",
+        "TR",
+        "HU",
+        "PL",
+        "CZ",
+        "SK",
+        "SI",
+        "RO",
+        "BG",
+        "EE",
+        "LV",
+        "LT",
+        "AL",
+        "HR",
+        "MK",
+        "ME",
+        "FI",
+        "SE"
+      ]
+    },
+    {
+      "name": "欧盟",
+      "iso": [
+        "FR",
+        "DE",
+        "IT",
+        "NL",
+        "BE",
+        "LU",
+        "IE",
+        "DK",
+        "GR",
+        "ES",
+        "PT",
+        "SE",
+        "FI",
+        "AT",
+        "PL",
+        "CZ",
+        "HU",
+        "RO",
+        "BG",
+        "EE",
+        "LV",
+        "LT",
+        "SI",
+        "SK",
+        "HR",
+        "CY",
+        "MT"
+      ]
+    },
+    {
+      "name": "东盟",
+      "iso": [
+        "ID",
+        "MY",
+        "PH",
+        "SG",
+        "TH",
+        "VN",
+        "MM",
+        "KH",
+        "LA",
+        "BN"
+      ]
+    },
+    {
+      "name": "金砖国家",
+      "iso": [
+        "BR",
+        "RU",
+        "IN",
+        "CN",
+        "ZA",
+        "EG",
+        "ET",
+        "IR",
+        "SA",
+        "AE"
+      ]
+    },
+    {
+      "name": "五眼联盟",
+      "iso": [
+        "US",
+        "GB",
+        "CA",
+        "AU",
+        "NZ"
+      ]
+    },
+    {
+      "name": "二十国集团",
+      "iso": [
+        "AR",
+        "AU",
+        "BR",
+        "CA",
+        "CN",
+        "FR",
+        "DE",
+        "IN",
+        "ID",
+        "IT",
+        "JP",
+        "MX",
+        "RU",
+        "SA",
+        "ZA",
+        "KR",
+        "TR",
+        "GB",
+        "US"
+      ]
+    },
+    {
+      "name": "上海合作组织",
+      "iso": [
+        "CN",
+        "RU",
+        "IN",
+        "PK",
+        "IR",
+        "KZ",
+        "KG",
+        "TJ",
+        "UZ",
+        "BY"
+      ]
+    },
+    {
+      "name": "七国集团",
+      "iso": [
+        "US",
+        "GB",
+        "FR",
+        "DE",
+        "IT",
+        "JP",
+        "CA"
+      ]
+    },
+    {
+      "name": "海湾合作委员会",
+      "iso": [
+        "SA",
+        "AE",
+        "QA",
+        "KW",
+        "BH",
+        "OM"
+      ]
+    },
+    {
+      "name": "北欧五国",
+      "iso": [
+        "DK",
+        "FI",
+        "IS",
+        "NO",
+        "SE"
+      ]
+    },
+    {
+      "name": "波罗的海三国",
+      "iso": [
+        "EE",
+        "LV",
+        "LT"
+      ]
+    },
+    {
+      "name": "中亚五国",
+      "iso": [
+        "KZ",
+        "UZ",
+        "TM",
+        "KG",
+        "TJ"
+      ]
+    },
+    {
+      "name": "东南亚地区",
+      "iso": [
+        "ID",
+        "MY",
+        "PH",
+        "SG",
+        "TH",
+        "VN",
+        "MM",
+        "KH",
+        "LA",
+        "BN",
+        "TL"
+      ]
+    },
+    {
+      "name": "中东地区",
+      "iso": [
+        "TR",
+        "CY",
+        "SY",
+        "LB",
+        "IL",
+        "PS",
+        "JO",
+        "SA",
+        "YE",
+        "OM",
+        "AE",
+        "BH",
+        "QA",
+        "KW",
+        "IQ",
+        "IR",
+        "EG"
+      ]
+    },
+    {
+      "name": "独联体",
+      "iso": [
+        "RU",
+        "BY",
+        "KZ",
+        "KG",
+        "TJ",
+        "UZ",
+        "AZ",
+        "AM",
+        "MD"
+      ]
+    },
+    {
+      "name": "阿拉伯国家联盟",
+      "iso": [
+        "DZ",
+        "BH",
+        "KM",
+        "DJ",
+        "EG",
+        "IQ",
+        "JO",
+        "KW",
+        "LB",
+        "LY",
+        "MR",
+        "MA",
+        "OM",
+        "PS",
+        "QA",
+        "SA",
+        "SO",
+        "SD",
+        "SY",
+        "TN",
+        "AE",
+        "YE"
+      ]
+    },
+    {
+      "name": "南美洲地区",
+      "iso": [
+        "AR",
+        "BO",
+        "BR",
+        "CL",
+        "CO",
+        "EC",
+        "GY",
+        "PY",
+        "PE",
+        "SR",
+        "UY",
+        "VE"
+      ]
+    }
+  ]
+}

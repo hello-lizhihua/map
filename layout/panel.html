@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<!-- 地球场景布局设计稿 · 零依赖 · file:// 双击直接打开 -->
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>地球场景布局 · 国别面板设计稿</title>
+<style>
+:root{
+  --ink:#f0ede6;
+  --amber:#ffcc33;
+  --panel:rgba(13,15,20,.82);
+  --ctrl:rgba(20,22,28,.62);
+  --pop:rgba(20,22,28,.78);
+  --line:rgba(240,237,230,.12);
+  --ink-dim:rgba(240,237,230,.55);
+  --ink-faint:rgba(240,237,230,.42);
+  --r6:6px;
+  --r14:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#14161a}
+body{
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;
+  padding:26px 16px 44px;color:var(--ink);
+  font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Source Han Sans SC",system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+button{font-family:inherit;border:none;background:none;color:inherit;cursor:pointer;padding:0}
+input{font-family:inherit}
+.hide{display:none!important}
+
+/* ===== 页面说明头 ===== */
+.page-head{text-align:center;margin-bottom:18px}
+.page-head h1{font-size:17px;font-weight:600;letter-spacing:.5px}
+.page-head p{margin-top:6px;font-size:12.5px;color:var(--ink-dim);letter-spacing:.3px}
+
+/* ===== 1600x900 场景画布（自适应缩放：窗口小于画布时整体等比缩小，保持设计坐标） ===== */
+.canvas{
+  position:relative;flex:none;width:1600px;height:900px;overflow:hidden;
+  border-radius:var(--r14);
+  background:linear-gradient(135deg,#ece7dd,#e2dccd);
+  box-shadow:0 24px 80px rgba(0,0,0,.5);
+  transform-origin:top center;
+}
+.earth{
+  position:absolute;left:-690px;top:210px;width:1500px;height:1500px;border-radius:50%;
+  background:#dfe7ea;border:2px solid #d8d2c2;
+}
+.hint{
+  position:absolute;left:24px;bottom:18px;font-size:12px;letter-spacing:.5px;
+  color:rgba(38,41,48,.8);user-select:none;
+  text-shadow:0 1px 0 rgba(255,255,255,.75),0 0 6px rgba(255,255,255,.35);
+}
+
+/* ===== 右上角控制排（y=40 中线） ===== */
+.cbtn{
+  position:absolute;top:24px;width:32px;height:32px;border-radius:50%;
+  background:var(--ctrl);display:grid;place-items:center;transition:background .15s;
+}
+.cbtn:hover{background:rgba(20,22,28,.78)}
+.cbtn:active{transform:scale(.95)}
+#gearBtn{left:24px}    /* 设置齿轮中心距左 40 */
+.zoom{
+  position:absolute;top:20px;left:72px;height:40px;   /* 胶囊左缘距左 72（齿轮命中区右缘 64 + 间隙 8） */
+  display:flex;align-items:center;gap:6px;padding:0 7px;
+  background:var(--ctrl);border-radius:20px;user-select:none;
+}
+.zbtn{
+  width:26px;height:26px;border-radius:50%;flex:none;
+  background:rgba(255,255,255,.09);color:var(--ink);font-size:14px;line-height:1;
+  display:grid;place-items:center;transition:background .15s;
+}
+.zbtn:hover{background:rgba(255,255,255,.18)}
+.zbtn:active{transform:scale(.94)}
+.ztrack{position:relative;width:88px;height:26px;cursor:pointer}
+.zticks{position:absolute;inset:0}
+.ztick{position:absolute;top:9px;width:1px;height:8px;background:rgba(240,237,230,.32)}
+.ztick.on{background:var(--amber)}
+.zthumb{
+  position:absolute;top:13px;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;
+  background:var(--amber);transition:left .15s;pointer-events:none;
+  box-shadow:0 0 0 3px rgba(255,204,51,.22),0 1px 4px rgba(0,0,0,.35);
+}
+
+/* ===== 设置面板 ===== */
+.settings{
+  position:absolute;top:76px;left:24px;width:148px;z-index:40;
+  background:var(--panel);border:1px solid rgba(240,237,230,.10);border-radius:var(--r14);
+  padding:5px 0;box-shadow:0 14px 36px rgba(0,0,0,.28);
+}
+.set-row{
+  height:38px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 12px;font-size:13px;color:rgba(240,237,230,.88);
+}
+.mrow{cursor:pointer;transition:background .12s}
+.mrow:hover{background:rgba(255,255,255,.06)}
+.mrow.sel{color:var(--amber)}
+.mdot{width:6px;height:6px;border-radius:50%;background:var(--amber);visibility:hidden;flex:none}
+.mrow.sel .mdot{visibility:visible}
+.sep{height:1px;background:rgba(240,237,230,.10);margin:2px 8px}
+.switch{
+  position:relative;flex:none;width:36px;height:20px;border-radius:10px;
+  background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.28);
+  transition:background .15s,border-color .15s;
+}
+.switch .knob{
+  position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;
+  background:#f0ede6;transition:left .15s,background .15s;
+}
+.switch.on{background:var(--amber);border-color:var(--amber)}
+.switch.on .knob{left:18px;background:#17191f}
+
+/* ===== 右侧国家面板（宽 300，右缘距右 12，上 84 下 20） ===== */
+.cpanel{transition:transform .28s ease, opacity .28s ease;
+  position:absolute;top:20px;right:12px;bottom:20px;width:300px;z-index:10;
+  display:flex;flex-direction:column;
+  background:var(--panel);border-radius:var(--r14);
+  box-shadow:0 18px 48px rgba(0,0,0,.30);
+}
+.cpanel::before{ /* 左缘 1px 分隔线 */
+  content:'';position:absolute;left:0;top:14px;bottom:14px;width:1px;
+  background:rgba(240,237,230,.16);
+}
+.cpanel.collapsed{transform:translateX(calc(100% + 24px));opacity:0;pointer-events:none}
+.cexpand{
+  position:absolute;top:20px;right:12px;width:24px;height:64px;
+  border-radius:var(--r6);background:rgba(13,15,20,.82);border:1px solid rgba(240,237,230,.14);
+  color:var(--ink);font-size:15px;display:flex;align-items:center;justify-content:center;
+}
+.cexpand:hover{background:rgba(20,22,28,.92)}
+.chead{height:44px;flex:none;display:flex;align-items:center;padding:0 12px;border-bottom:1px solid rgba(240,237,230,.08)}
+.ctitle{font-size:15px;font-weight:600}
+.ccount{margin-left:8px;font-size:12px;color:var(--ink-faint)}
+.ccollapse{
+  margin-left:auto;width:24px;height:24px;border-radius:var(--r6);
+  font-size:14px;color:rgba(240,237,230,.6);display:grid;place-items:center;transition:background .12s,color .12s;
+}
+.ccollapse:hover{background:rgba(255,255,255,.10);color:var(--ink)}
+
+/* 页签条（高 32） */
+.tabs{padding:0 8px;height:32px;flex:none;display:flex;align-items:stretch;padding:0 8px;border-bottom:1px solid rgba(240,237,230,.08)}
+.tab{position:relative;padding:0 12px;font-size:13px;color:rgba(240,237,230,.5);transition:color .12s}
+.tab:hover{color:rgba(240,237,230,.75)}
+.tab.active{color:var(--ink)}
+.tab.active::after{
+  content:'';position:absolute;left:10px;right:10px;bottom:-1px;height:2px;
+  background:var(--amber);border-radius:1px;
+}
+
+/* 选中页签内容 */
+.pane{padding:4px 8px 8px;padding:10px 8px 8px;flex:none}
+.prow{margin-bottom:8px}
+.prow:last-child{margin-bottom:0}
+.chips{display:flex;gap:5px}
+.chip{
+  flex:1;height:26px;border-radius:var(--r6);
+  background:rgba(255,255,255,.08);font-size:12px;color:rgba(240,237,230,.75);
+  display:grid;place-items:center;transition:background .12s,color .12s;
+}
+.chip:hover{background:rgba(255,255,255,.14)}
+.chip.active{background:var(--amber);color:#17191f;font-weight:600}
+.filters{display:flex;gap:6px}
+.frow{display:flex;gap:8px;align-items:center}
+.flabel{flex:none;width:32px;font-size:12.5px;color:var(--ink-dim)}
+.dd{position:relative;flex:1;min-width:0}
+.ddbox{
+  width:100%;height:30px;border-radius:var(--r6);
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);
+  display:flex;align-items:center;gap:6px;padding:0 8px;
+  font-size:12px;color:var(--ink-faint);transition:border-color .12s;
+}
+.ddbox:hover{border-color:rgba(255,255,255,.26)}
+.dd.open .ddbox{border-color:rgba(255,204,51,.55)}
+.dd.has .ddbox{color:var(--ink)}
+.ddlabel{flex:1;min-width:0;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ddclear{display:none;flex:none;width:16px;height:16px;line-height:14px;text-align:center;border-radius:50%;
+  color:rgba(240,237,230,.6);font-size:12px;margin-right:2px}
+.ddclear:hover{background:rgba(240,237,230,.18);color:var(--ink)}
+.dd.has .ddclear{display:block}
+.caret{font-size:9px;color:rgba(240,237,230,.5);transition:transform .15s;flex:none}
+.dd.open .caret{transform:rotate(180deg)}
+.ddpop{
+  position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:30;
+  background:var(--pop);border:1px solid var(--line);border-radius:var(--r6);padding:4px;
+  box-shadow:0 12px 30px rgba(0,0,0,.35);display:none;
+}
+.dd.open .ddpop{display:block}
+.ditem{
+  height:30px;display:flex;align-items:center;gap:6px;padding:0 8px;border-radius:4px;
+  font-size:12.5px;color:rgba(240,237,230,.72);cursor:pointer;transition:background .1s;
+}
+.ditem:hover{background:rgba(255,255,255,.07)}
+.ditem .tick{width:14px;flex:none;font-size:11px;color:var(--amber);visibility:hidden}
+.ditem.on{background:rgba(255,255,255,.09);color:var(--ink)}
+.ditem.on .tick{visibility:visible}
+.sorter{display:flex;align-items:center;gap:8px}
+.sortlabel{font-size:12.5px;color:var(--ink-dim);flex:none;user-select:none}
+.sorter .chips{flex:1}
+.search input{
+  width:100%;height:30px;border-radius:var(--r6);outline:none;
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);
+  padding:0 10px;font-size:12.5px;color:var(--ink);transition:border-color .12s;
+}
+.search input::placeholder{color:rgba(240,237,230,.35)}
+.search input:focus{border-color:rgba(255,204,51,.55)}
+
+/* 国家页签：手风琴列表 */
+.cworld{display:flex;flex-direction:column;flex:1;min-height:0;padding:4px 8px 8px}
+.clist{flex:1;min-height:0;overflow-y:auto;padding-bottom:6px}
+.clist::-webkit-scrollbar{width:8px}
+.clist::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:4px}
+.clist::-webkit-scrollbar-track{background:transparent}
+.ghead{
+  position:relative;height:32px;flex:none;display:flex;align-items:center;padding:0 10px;
+  background:rgba(255,255,255,.055);font-size:13px;font-weight:600;color:var(--ink);
+  cursor:pointer;user-select:none;transition:background .12s;
+}
+.ghead:hover{background:rgba(255,255,255,.09)}
+.ghead::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--amber);opacity:0}
+.ghead.exp::before{opacity:1}
+.gcount{margin-left:auto;font-size:11px;font-weight:400;color:var(--ink-faint)}
+.garrow{margin-left:8px;width:10px;text-align:center;font-size:10px;color:rgba(240,237,230,.6);flex:none}
+.crow{position:relative;cursor:pointer;transition:background .12s}
+.crmain{height:38px;display:flex;align-items:center;padding:0 10px 0 12px}
+.crow:not(.sel):hover{background:rgba(255,255,255,.10)}
+.crow.sel{background:rgba(255,255,255,.22)}
+.crow.sel::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--amber)}
+.ccode{width:46px;flex:none;font-size:12px;color:var(--ink-faint)}
+.cname{flex:1;min-width:0;font-size:16px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cpop{flex:none;margin-left:8px;font-size:13px;color:var(--ink-faint)}
+.cdetail{padding:0 10px 10px 58px;font-size:12px;line-height:19px;color:rgba(240,237,230,.62)}
+.cempty{padding:24px 0;text-align:center;font-size:12.5px;color:var(--ink-faint)}
+</style>
+</head>
+<body>
+
+<header class="page-head">
+  <h1>地球场景布局 · 国别面板设计稿</h1>
+  <p>此页为布局设计稿，审核通过后落 Godot 实现 · <span id="fitInfo"></span></p>
+</header>
+
+<div class="canvas" id="canvas">
+  <!-- 地球示意（左下 1/2 出画） -->
+  <div class="earth"></div>
+  <div class="hint">拖动旋转 · 滑块缩放</div>
+
+  <!-- 缩放滑块 -->
+  <div class="zoom">
+    <button class="zbtn" id="zoomOut" type="button" aria-label="缩小">−</button>
+    <div class="ztrack" id="ztrack">
+      <div class="zticks" id="zticks"></div>
+      <div class="zthumb" id="zthumb"></div>
+    </div>
+    <button class="zbtn" id="zoomIn" type="button" aria-label="放大">＋</button>
+  </div>
+
+  <!-- 返回按钮（真实场景共享组件，回场景选择界面） -->
+    <!-- 设置齿轮 -->
+  <button class="cbtn" id="gearBtn" type="button" title="设置" aria-label="设置">
+    <svg width="20" height="20" viewBox="0 0 32 32" fill="none" stroke="#f0ede6" stroke-width="1.6" stroke-linecap="round" opacity=".92">
+      <circle cx="16" cy="16" r="7"/>
+      <circle cx="16" cy="16" r="2.6"/>
+      <path d="M25.6 16 L29 16"/><path d="M22.8 22.8 L25.2 25.2"/><path d="M16 25.6 L16 29"/><path d="M9.2 22.8 L6.8 25.2"/>
+      <path d="M6.4 16 L3 16"/><path d="M9.2 9.2 L6.8 6.8"/><path d="M16 6.4 L16 3"/><path d="M22.8 9.2 L25.2 6.8"/>
+    </svg>
+  </button>
+
+  <!-- 设置面板 -->
+  <div class="settings hide" id="settings">
+    <div class="set-row back" id="backRow"><span>‹ 返回场景选择</span></div>
+    <div class="sep"></div>
+    <div class="set-row"><span>全屏</span><button class="switch" id="fsSwitch" type="button" aria-label="全屏开关"><span class="knob"></span></button></div>
+    <div class="sep"></div>
+    <div id="mapTypes"></div>
+  </div>
+
+  <!-- 面板收起后的展开把手（默认隐藏） -->
+  <button class="cexpand hide" id="cexpand" type="button" aria-label="展开面板">›</button>
+
+  <!-- 国家面板 -->
+  <aside class="cpanel">
+    <div class="chead">
+      <button class="ccollapse" type="button" aria-label="收起面板">‹</button>
+    </div>
+    <div class="tabs">
+      <button class="tab active" data-tab="countries" type="button">国家(242)</button>
+      <button class="tab" data-tab="selected" type="button">选中</button>
+    </div>
+
+    <!-- 选中页签：大洲 / 组织两个多选维度下拉 -->
+    <div class="pane hide" id="paneSelected">
+      <div class="prow frow"><span class="flabel">大洲</span>
+        <div class="dd" id="ddCont" data-ph="全部">
+          <button class="ddbox" type="button"><span class="ddlabel">全部</span><span class="ddclear" title="清空多选">×</span><span class="caret">▾</span></button>
+          <div class="ddpop"></div>
+        </div>
+      </div>
+      <div class="prow frow"><span class="flabel">组织</span>
+        <div class="dd" id="ddOrg" data-ph="组织">
+          <button class="ddbox" type="button"><span class="ddlabel">组织</span><span class="ddclear" title="清空多选">×</span><span class="caret">▾</span></button>
+          <div class="ddpop"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 国家页签：筛选（大洲/组织）+ 排序 + 搜索 + 手风琴列表 -->
+    <div class="cworld" id="paneCountries">
+      <div class="prow sorter">
+        <span class="sortlabel">排序</span>
+        <div class="chips" id="sortChips"></div>
+      </div>
+      <div class="prow search">
+        <input id="search" type="text" placeholder="搜索国家：CN / 中国" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="clist" id="clist"></div>
+    </div>
+  </aside>
+</div>
+
+<script>
+(function(){
+'use strict';
+var $ = function(s){ return document.querySelector(s); };
+
+/* ===== 数据（pop：万人；area：万km²） ===== */
+var GROUPS = ['亚洲','欧洲','非洲','北美洲','南美洲','大洋洲'];
+var DATA = [{"code":"BT","name":"不丹","cont":"亚洲","pop":76,"area":4.0,"lat":"27°N","lon":"90°E"},{"code":"TL","name":"东帝汶","cont":"亚洲","pop":129,"area":1.5,"lat":"9°S","lon":"126°E"},{"code":"CN","name":"中华人民共和国","cont":"亚洲","pop":139772,"area":952.5,"lat":"36°N","lon":"104°E"},{"code":"CF","name":"中非共和国","cont":"非洲","pop":475,"area":62.1,"lat":"7°N","lon":"20°E"},{"code":"DK","name":"丹麦","cont":"欧洲","pop":582,"area":4.2,"lat":"56°N","lon":"9°E"},{"code":"UA","name":"乌克兰","cont":"欧洲","pop":4439,"area":57.0,"lat":"49°N","lon":"31°E"},{"code":"UZ","name":"乌兹别克斯坦","cont":"亚洲","pop":3358,"area":44.7,"lat":"42°N","lon":"63°E"},{"code":"UG","name":"乌干达","cont":"非洲","pop":4427,"area":24.3,"lat":"1°N","lon":"32°E"},{"code":"UY","name":"乌拉圭","cont":"南美洲","pop":346,"area":17.8,"lat":"33°S","lon":"56°W"},{"code":"TD","name":"乍得","cont":"非洲","pop":1595,"area":127.1,"lat":"15°N","lon":"19°E"},{"code":"YE","name":"也门","cont":"亚洲","pop":2916,"area":45.4,"lat":"16°N","lon":"48°E"},{"code":"AM","name":"亚美尼亚","cont":"亚洲","pop":296,"area":3.0,"lat":"40°N","lon":"45°E"},{"code":"IL","name":"以色列","cont":"亚洲","pop":905,"area":2.2,"lat":"31°N","lon":"35°E"},{"code":"IQ","name":"伊拉克","cont":"亚洲","pop":3931,"area":43.7,"lat":"33°N","lon":"44°E"},{"code":"IR","name":"伊朗","cont":"亚洲","pop":8291,"area":162.3,"lat":"33°N","lon":"54°E"},{"code":"BZ","name":"伯利兹","cont":"北美洲","pop":39,"area":2.3,"lat":"17°N","lon":"89°W"},{"code":"CV","name":"佛得角","cont":"非洲","pop":55,"area":0.4,"lat":"15°N","lon":"24°W"},{"code":"RU","name":"俄罗斯","cont":"欧洲","pop":14437,"area":1688.0,"lat":"62°N","lon":"99°E"},{"code":"BG","name":"保加利亚","cont":"欧洲","pop":698,"area":11.2,"lat":"43°N","lon":"25°E"},{"code":"HR","name":"克罗地亚","cont":"欧洲","pop":407,"area":5.4,"lat":"45°N","lon":"16°E"},{"code":"GU","name":"关岛","cont":"大洋洲","pop":17,"area":0.0,"lat":"13°N","lon":"145°E"},{"code":"GM","name":"冈比亚","cont":"非洲","pop":235,"area":1.0,"lat":"13°N","lon":"15°W"},{"code":"IS","name":"冰岛","cont":"欧洲","pop":36,"area":10.1,"lat":"65°N","lon":"19°W"},{"code":"GN","name":"几内亚","cont":"非洲","pop":1277,"area":24.5,"lat":"10°N","lon":"11°W"},{"code":"GW","name":"几内亚比绍","cont":"非洲","pop":192,"area":3.2,"lat":"12°N","lon":"15°W"},{"code":"LI","name":"列支敦士登","cont":"欧洲","pop":4,"area":0.0,"lat":"47°N","lon":"10°E"},{"code":"CG","name":"刚果共和国","cont":"非洲","pop":538,"area":34.7,"lat":"1°S","lon":"15°E"},{"code":"CD","name":"刚果民主共和国","cont":"非洲","pop":8679,"area":233.5,"lat":"3°S","lon":"24°E"},{"code":"LY","name":"利比亚","cont":"非洲","pop":678,"area":162.7,"lat":"27°N","lon":"18°E"},{"code":"LR","name":"利比里亚","cont":"非洲","pop":494,"area":9.6,"lat":"6°N","lon":"9°W"},{"code":"CA","name":"加拿大","cont":"北美洲","pop":3759,"area":987.2,"lat":"58°N","lon":"102°W"},{"code":"GH","name":"加纳","cont":"非洲","pop":3042,"area":24.0,"lat":"8°N","lon":"1°W"},{"code":"GA","name":"加蓬","cont":"非洲","pop":217,"area":26.1,"lat":"1°S","lon":"12°E"},{"code":"HU","name":"匈牙利","cont":"欧洲","pop":977,"area":9.3,"lat":"47°N","lon":"19°E"},{"code":"","name":"北塞浦路斯土耳其共和国","cont":"亚洲","pop":33,"area":0.3,"lat":"35°N","lon":"34°E"},{"code":"MK","name":"北马其顿","cont":"欧洲","pop":208,"area":2.5,"lat":"42°N","lon":"22°E"},{"code":"MP","name":"北马里亚纳群岛","cont":"大洋洲","pop":6,"area":0.0,"lat":"15°N","lon":"146°E"},{"code":"GS","name":"南乔治亚和南桑威奇群岛","cont":"南美洲","pop":0,"area":0.4,"lat":"54°S","lon":"37°W"},{"code":"AQ","name":"南极洲","cont":"南极洲","pop":0,"area":1225.7,"lat":"81°S","lon":"21°E"},{"code":"SS","name":"南苏丹","cont":"非洲","pop":1106,"area":62.4,"lat":"7°N","lon":"30°E"},{"code":"ZA","name":"南非","cont":"非洲","pop":5856,"area":122.2,"lat":"29°S","lon":"25°E"},{"code":"BW","name":"博茨瓦纳","cont":"非洲","pop":230,"area":58.1,"lat":"22°S","lon":"24°E"},{"code":"QA","name":"卡塔尔","cont":"亚洲","pop":283,"area":1.1,"lat":"25°N","lon":"51°E"},{"code":"RW","name":"卢旺达","cont":"非洲","pop":1263,"area":2.5,"lat":"2°S","lon":"30°E"},{"code":"LU","name":"卢森堡","cont":"欧洲","pop":62,"area":0.3,"lat":"50°N","lon":"6°E"},{"code":"IN","name":"印度","cont":"亚洲","pop":136642,"area":315.6,"lat":"23°N","lon":"80°E"},{"code":"ID","name":"印度尼西亚","cont":"亚洲","pop":27063,"area":187.2,"lat":"0°S","lon":"114°E"},{"code":"GT","name":"危地马拉","cont":"北美洲","pop":1660,"area":10.8,"lat":"16°N","lon":"90°W"},{"code":"EC","name":"厄瓜多尔","cont":"南美洲","pop":1737,"area":25.6,"lat":"1°S","lon":"78°W"},{"code":"ER","name":"厄立特里亚","cont":"非洲","pop":608,"area":12.4,"lat":"15°N","lon":"39°E"},{"code":"SY","name":"叙利亚","cont":"亚洲","pop":1707,"area":18.6,"lat":"35°N","lon":"39°E"},{"code":"CU","name":"古巴","cont":"北美洲","pop":1133,"area":10.9,"lat":"22°N","lon":"79°W"},{"code":"CN-TW","name":"中国-台湾","cont":"亚洲","pop":2357,"area":3.6,"lat":"24°N","lon":"121°E"},{"code":"KG","name":"吉尔吉斯斯坦","cont":"亚洲","pop":646,"area":19.9,"lat":"41°N","lon":"75°E"},{"code":"DJ","name":"吉布提","cont":"非洲","pop":97,"area":2.2,"lat":"12°N","lon":"43°E"},{"code":"KZ","name":"哈萨克斯坦","cont":"亚洲","pop":1851,"area":271.3,"lat":"48°N","lon":"67°E"},{"code":"CO","name":"哥伦比亚","cont":"南美洲","pop":5034,"area":113.9,"lat":"4°N","lon":"73°W"},{"code":"CR","name":"哥斯达黎加","cont":"北美洲","pop":505,"area":5.2,"lat":"10°N","lon":"84°W"},{"code":"CM","name":"喀麦隆","cont":"非洲","pop":2588,"area":46.6,"lat":"6°N","lon":"13°E"},{"code":"TV","name":"图瓦卢","cont":"大洋洲","pop":1,"area":0.0,"lat":"9°S","lon":"179°E"},{"code":"TM","name":"土库曼斯坦","cont":"亚洲","pop":594,"area":47.1,"lat":"39°N","lon":"59°E"},{"code":"TR","name":"土耳其","cont":"亚洲","pop":8343,"area":78.0,"lat":"39°N","lon":"35°E"},{"code":"LC","name":"圣卢西亚","cont":"北美洲","pop":18,"area":0.1,"lat":"14°N","lon":"61°W"},{"code":"KN","name":"圣基茨和尼维斯","cont":"北美洲","pop":5,"area":0.0,"lat":"17°N","lon":"63°W"},{"code":"ST","name":"圣多美和普林西比","cont":"非洲","pop":22,"area":0.1,"lat":"0°N","lon":"7°E"},{"code":"BL","name":"圣巴泰勒米","cont":"北美洲","pop":1,"area":0.0,"lat":"18°N","lon":"63°W"},{"code":"VC","name":"圣文森特和格林纳丁斯","cont":"北美洲","pop":11,"area":0.0,"lat":"13°N","lon":"61°W"},{"code":"PM","name":"圣皮埃尔和密克隆","cont":"北美洲","pop":1,"area":0.0,"lat":"47°N","lon":"56°W"},{"code":"SH","name":"圣赫勒拿","cont":"非洲","pop":0,"area":0.0,"lat":"16°S","lon":"6°W"},{"code":"SM","name":"圣马力诺","cont":"欧洲","pop":3,"area":0.0,"lat":"44°N","lon":"12°E"},{"code":"GY","name":"圭亚那","cont":"南美洲","pop":78,"area":21.2,"lat":"5°N","lon":"59°W"},{"code":"TZ","name":"坦桑尼亚","cont":"非洲","pop":5801,"area":94.6,"lat":"6°S","lon":"35°E"},{"code":"EG","name":"埃及","cont":"非洲","pop":10039,"area":100.4,"lat":"26°N","lon":"30°E"},{"code":"ET","name":"埃塞俄比亚","cont":"非洲","pop":11208,"area":113.2,"lat":"9°N","lon":"40°E"},{"code":"KI","name":"基里巴斯","cont":"大洋洲","pop":12,"area":0.1,"lat":"2°N","lon":"157°W"},{"code":"TJ","name":"塔吉克斯坦","cont":"亚洲","pop":932,"area":14.2,"lat":"39°N","lon":"71°E"},{"code":"SN","name":"塞内加尔","cont":"非洲","pop":1630,"area":19.7,"lat":"14°N","lon":"14°W"},{"code":"RS","name":"塞尔维亚","cont":"欧洲","pop":694,"area":7.7,"lat":"44°N","lon":"21°E"},{"code":"SL","name":"塞拉利昂","cont":"非洲","pop":781,"area":7.2,"lat":"9°N","lon":"12°W"},{"code":"CY","name":"塞浦路斯","cont":"亚洲","pop":120,"area":0.6,"lat":"35°N","lon":"33°E"},{"code":"SC","name":"塞舌尔","cont":"非洲","pop":10,"area":0.0,"lat":"5°S","lon":"55°E"},{"code":"MX","name":"墨西哥","cont":"北美洲","pop":12758,"area":196.2,"lat":"24°N","lon":"103°W"},{"code":"TG","name":"多哥","cont":"非洲","pop":808,"area":5.7,"lat":"9°N","lon":"1°E"},{"code":"DM","name":"多米尼克","cont":"北美洲","pop":7,"area":0.1,"lat":"15°N","lon":"61°W"},{"code":"DO","name":"多米尼加","cont":"北美洲","pop":1074,"area":4.9,"lat":"19°N","lon":"71°W"},{"code":"KR","name":"大韩民国","cont":"亚洲","pop":5171,"area":9.7,"lat":"36°N","lon":"128°E"},{"code":"AX","name":"奥兰","cont":"欧洲","pop":3,"area":0.1,"lat":"60°N","lon":"20°E"},{"code":"AT","name":"奥地利","cont":"欧洲","pop":888,"area":8.4,"lat":"48°N","lon":"14°E"},{"code":"VE","name":"委内瑞拉","cont":"南美洲","pop":2852,"area":91.4,"lat":"7°N","lon":"66°W"},{"code":"BD","name":"孟加拉国","cont":"亚洲","pop":16305,"area":13.6,"lat":"24°N","lon":"90°E"},{"code":"AO","name":"安哥拉","cont":"非洲","pop":3183,"area":124.9,"lat":"12°S","lon":"18°E"},{"code":"AI","name":"安圭拉","cont":"北美洲","pop":1,"area":0.0,"lat":"18°N","lon":"63°W"},{"code":"AG","name":"安提瓜和巴布达","cont":"北美洲","pop":10,"area":0.0,"lat":"17°N","lon":"62°W"},{"code":"AD","name":"安道尔","cont":"欧洲","pop":8,"area":0.0,"lat":"43°N","lon":"2°E"},{"code":"FM","name":"密克罗尼西亚联邦","cont":"大洋洲","pop":11,"area":0.1,"lat":"7°N","lon":"158°E"},{"code":"NI","name":"尼加拉瓜","cont":"北美洲","pop":655,"area":12.9,"lat":"13°N","lon":"85°W"},{"code":"NG","name":"尼日利亚","cont":"非洲","pop":20096,"area":91.2,"lat":"10°N","lon":"8°E"},{"code":"NE","name":"尼日尔","cont":"非洲","pop":2331,"area":118.5,"lat":"17°N","lon":"9°E"},{"code":"NP","name":"尼泊尔","cont":"亚洲","pop":2861,"area":14.7,"lat":"28°N","lon":"84°E"},{"code":"PS","name":"巴勒斯坦","cont":"亚洲","pop":469,"area":0.6,"lat":"32°N","lon":"35°E"},{"code":"BS","name":"巴哈马","cont":"北美洲","pop":39,"area":1.3,"lat":"25°N","lon":"78°W"},{"code":"PK","name":"巴基斯坦","cont":"亚洲","pop":21657,"area":87.4,"lat":"30°N","lon":"69°E"},{"code":"BB","name":"巴巴多斯","cont":"北美洲","pop":29,"area":0.0,"lat":"13°N","lon":"60°W"},{"code":"PG","name":"巴布亚新几内亚","cont":"大洋洲","pop":878,"area":46.4,"lat":"7°S","lon":"144°E"},{"code":"PY","name":"巴拉圭","cont":"南美洲","pop":704,"area":40.1,"lat":"23°S","lon":"58°W"},{"code":"PA","name":"巴拿马","cont":"北美洲","pop":425,"area":7.4,"lat":"9°N","lon":"80°W"},{"code":"BH","name":"巴林","cont":"亚洲","pop":164,"area":0.1,"lat":"26°N","lon":"51°E"},{"code":"BR","name":"巴西","cont":"南美洲","pop":21105,"area":849.9,"lat":"11°S","lon":"53°W"},{"code":"BF","name":"布基纳法索","cont":"非洲","pop":2032,"area":27.4,"lat":"12°N","lon":"2°W"},{"code":"BI","name":"布隆迪","cont":"非洲","pop":1153,"area":2.7,"lat":"3°S","lon":"30°E"},{"code":"GR","name":"希腊","cont":"欧洲","pop":1072,"area":13.0,"lat":"39°N","lon":"23°E"},{"code":"PW","name":"帕劳","cont":"大洋洲","pop":2,"area":0.0,"lat":"8°N","lon":"135°E"},{"code":"CK","name":"库克群岛","cont":"大洋洲","pop":2,"area":0.0,"lat":"21°S","lon":"160°W"},{"code":"CW","name":"库拉索","cont":"北美洲","pop":16,"area":0.0,"lat":"12°N","lon":"69°W"},{"code":"KY","name":"开曼群岛","cont":"北美洲","pop":6,"area":0.0,"lat":"19°N","lon":"81°W"},{"code":"DE","name":"德国","cont":"欧洲","pop":8313,"area":35.6,"lat":"51°N","lon":"10°E"},{"code":"IT","name":"意大利","cont":"欧洲","pop":6030,"area":30.0,"lat":"44°N","lon":"12°E"},{"code":"SB","name":"所罗门群岛","cont":"大洋洲","pop":67,"area":2.6,"lat":"10°S","lon":"160°E"},{"code":"LV","name":"拉脱维亚","cont":"欧洲","pop":191,"area":6.4,"lat":"57°N","lon":"25°E"},{"code":"NO","name":"挪威","cont":"欧洲","pop":535,"area":38.4,"lat":"64°N","lon":"14°E"},{"code":"CZ","name":"捷克","cont":"欧洲","pop":1067,"area":7.8,"lat":"50°N","lon":"15°E"},{"code":"MD","name":"摩尔多瓦","cont":"欧洲","pop":266,"area":3.3,"lat":"47°N","lon":"28°E"},{"code":"MA","name":"摩洛哥","cont":"非洲","pop":3647,"area":58.2,"lat":"30°N","lon":"8°W"},{"code":"MC","name":"摩纳哥","cont":"欧洲","pop":4,"area":0.0,"lat":"44°N","lon":"7°E"},{"code":"BN","name":"文莱","cont":"亚洲","pop":43,"area":0.6,"lat":"4°N","lon":"115°E"},{"code":"FJ","name":"斐济","cont":"大洋洲","pop":89,"area":1.8,"lat":"18°S","lon":"178°E"},{"code":"SZ","name":"斯威士兰","cont":"非洲","pop":115,"area":1.7,"lat":"27°S","lon":"31°E"},{"code":"SK","name":"斯洛伐克","cont":"欧洲","pop":545,"area":4.8,"lat":"49°N","lon":"19°E"},{"code":"SI","name":"斯洛文尼亚","cont":"欧洲","pop":209,"area":2.0,"lat":"46°N","lon":"15°E"},{"code":"LK","name":"斯里兰卡","cont":"亚洲","pop":2180,"area":6.6,"lat":"8°N","lon":"81°E"},{"code":"SG","name":"新加坡","cont":"亚洲","pop":570,"area":0.0,"lat":"1°N","lon":"104°E"},{"code":"NC","name":"新喀里多尼亚","cont":"大洋洲","pop":29,"area":1.9,"lat":"21°S","lon":"165°E"},{"code":"NZ","name":"新西兰","cont":"大洋洲","pop":492,"area":26.7,"lat":"44°S","lon":"171°E"},{"code":"JP","name":"日本","cont":"亚洲","pop":12626,"area":37.0,"lat":"37°N","lon":"138°E"},{"code":"CL","name":"智利","cont":"南美洲","pop":1895,"area":73.7,"lat":"36°S","lon":"71°W"},{"code":"KP","name":"朝鲜民主主义人民共和国","cont":"亚洲","pop":2567,"area":12.2,"lat":"40°N","lon":"127°E"},{"code":"KH","name":"柬埔寨","cont":"亚洲","pop":1649,"area":18.1,"lat":"13°N","lon":"105°E"},{"code":"GG","name":"根西","cont":"欧洲","pop":6,"area":0.0,"lat":"49°N","lon":"3°W"},{"code":"GD","name":"格林纳达","cont":"北美洲","pop":11,"area":0.0,"lat":"12°N","lon":"62°W"},{"code":"GL","name":"格陵兰","cont":"北美洲","pop":6,"area":215.5,"lat":"75°N","lon":"41°W"},{"code":"GE","name":"格鲁吉亚","cont":"亚洲","pop":372,"area":6.9,"lat":"42°N","lon":"44°E"},{"code":"VA","name":"梵蒂冈","cont":"欧洲","pop":0,"area":0.0,"lat":"42°N","lon":"12°E"},{"code":"BE","name":"比利时","cont":"欧洲","pop":1148,"area":3.1,"lat":"51°N","lon":"5°E"},{"code":"MR","name":"毛里塔尼亚","cont":"非洲","pop":453,"area":103.8,"lat":"20°N","lon":"10°W"},{"code":"MU","name":"毛里求斯","cont":"非洲","pop":127,"area":0.2,"lat":"20°S","lon":"58°E"},{"code":"TO","name":"汤加","cont":"大洋洲","pop":10,"area":0.0,"lat":"21°S","lon":"175°W"},{"code":"SA","name":"沙特阿拉伯","cont":"亚洲","pop":3427,"area":192.6,"lat":"24°N","lon":"45°E"},{"code":"FR","name":"法国","cont":"欧洲","pop":6706,"area":63.5,"lat":"47°N","lon":"2°E"},{"code":"TF","name":"法属南部和南极领地","cont":"南极洲","pop":0,"area":0.7,"lat":"49°S","lon":"69°E"},{"code":"MF","name":"法属圣马丁","cont":"北美洲","pop":4,"area":0.0,"lat":"18°N","lon":"63°W"},{"code":"PF","name":"法属波利尼西亚","cont":"大洋洲","pop":28,"area":0.3,"lat":"18°S","lon":"149°W"},{"code":"FO","name":"法罗群岛","cont":"欧洲","pop":5,"area":0.1,"lat":"62°N","lon":"7°W"},{"code":"PL","name":"波兰","cont":"欧洲","pop":3797,"area":31.3,"lat":"52°N","lon":"19°E"},{"code":"PR","name":"波多黎各","cont":"北美洲","pop":319,"area":0.9,"lat":"18°N","lon":"66°W"},{"code":"BA","name":"波斯尼亚和黑塞哥维那","cont":"欧洲","pop":330,"area":5.2,"lat":"44°N","lon":"18°E"},{"code":"TH","name":"泰国","cont":"亚洲","pop":6963,"area":51.6,"lat":"15°N","lon":"101°E"},{"code":"JE","name":"泽西","cont":"欧洲","pop":11,"area":0.0,"lat":"49°N","lon":"2°W"},{"code":"ZW","name":"津巴布韦","cont":"非洲","pop":1465,"area":39.0,"lat":"19°S","lon":"30°E"},{"code":"HN","name":"洪都拉斯","cont":"北美洲","pop":975,"area":11.4,"lat":"15°N","lon":"87°W"},{"code":"HT","name":"海地","cont":"北美洲","pop":1126,"area":2.7,"lat":"19°N","lon":"73°W"},{"code":"AU","name":"澳大利亚","cont":"大洋洲","pop":2536,"area":770.6,"lat":"26°S","lon":"134°E"},{"code":"AU","name":"澳屬印度洋領地","cont":"亚洲","pop":0,"area":0.0,"lat":"10°S","lon":"106°E"},{"code":"CN-MO","name":"中国-澳门","cont":"亚洲","pop":64,"area":0.0,"lat":"22°N","lon":"114°E"},{"code":"IE","name":"爱尔兰","cont":"欧洲","pop":494,"area":6.9,"lat":"53°N","lon":"8°W"},{"code":"EE","name":"爱沙尼亚","cont":"欧洲","pop":133,"area":4.5,"lat":"59°N","lon":"26°E"},{"code":"JM","name":"牙买加","cont":"北美洲","pop":295,"area":1.1,"lat":"18°N","lon":"77°W"},{"code":"TC","name":"特克斯和凯科斯群岛","cont":"北美洲","pop":4,"area":0.0,"lat":"22°N","lon":"72°W"},{"code":"TT","name":"特立尼达和多巴哥","cont":"北美洲","pop":139,"area":0.5,"lat":"10°N","lon":"61°W"},{"code":"BO","name":"玻利维亚","cont":"南美洲","pop":1151,"area":109.0,"lat":"17°S","lon":"65°W"},{"code":"NR","name":"瑙鲁","cont":"大洋洲","pop":1,"area":0.0,"lat":"1°S","lon":"167°E"},{"code":"SE","name":"瑞典","cont":"欧洲","pop":1029,"area":44.3,"lat":"63°N","lon":"17°E"},{"code":"CH","name":"瑞士","cont":"欧洲","pop":857,"area":4.1,"lat":"47°N","lon":"8°E"},{"code":"WF","name":"瓦利斯和富图纳","cont":"大洋洲","pop":1,"area":0.0,"lat":"14°S","lon":"178°W"},{"code":"VU","name":"瓦努阿图","cont":"大洋洲","pop":30,"area":1.1,"lat":"15°S","lon":"167°E"},{"code":"BY","name":"白俄罗斯","cont":"欧洲","pop":947,"area":20.7,"lat":"54°N","lon":"28°E"},{"code":"BM","name":"百慕大","cont":"北美洲","pop":6,"area":0.0,"lat":"32°N","lon":"65°W"},{"code":"PN","name":"皮特凯恩群岛","cont":"大洋洲","pop":0,"area":0.0,"lat":"24°S","lon":"128°W"},{"code":"FK","name":"福克兰群岛","cont":"南美洲","pop":0,"area":1.1,"lat":"52°S","lon":"59°W"},{"code":"KW","name":"科威特","cont":"亚洲","pop":421,"area":1.7,"lat":"29°N","lon":"48°E"},{"code":"KM","name":"科摩罗","cont":"非洲","pop":85,"area":0.2,"lat":"12°S","lon":"43°E"},{"code":"CI","name":"科特迪瓦","cont":"非洲","pop":2572,"area":32.2,"lat":"8°N","lon":"6°W"},{"code":"XK","name":"科索沃","cont":"欧洲","pop":179,"area":1.1,"lat":"43°N","lon":"21°E"},{"code":"PE","name":"秘鲁","cont":"南美洲","pop":3251,"area":129.6,"lat":"9°S","lon":"74°W"},{"code":"TN","name":"突尼斯","cont":"非洲","pop":1169,"area":15.7,"lat":"34°N","lon":"10°E"},{"code":"LT","name":"立陶宛","cont":"欧洲","pop":279,"area":6.5,"lat":"55°N","lon":"24°E"},{"code":"SO","name":"索马里","cont":"非洲","pop":1019,"area":47.4,"lat":"5°N","lon":"46°E"},{"code":"","name":"索马里兰","cont":"非洲","pop":510,"area":16.8,"lat":"10°N","lon":"46°E"},{"code":"JO","name":"约旦","cont":"亚洲","pop":1010,"area":8.9,"lat":"31°N","lon":"37°E"},{"code":"NA","name":"纳米比亚","cont":"非洲","pop":249,"area":82.5,"lat":"22°S","lon":"17°E"},{"code":"NU","name":"纽埃","cont":"大洋洲","pop":0,"area":0.0,"lat":"19°S","lon":"170°W"},{"code":"MM","name":"缅甸","cont":"亚洲","pop":5405,"area":66.3,"lat":"21°N","lon":"96°E"},{"code":"RO","name":"罗马尼亚","cont":"欧洲","pop":1936,"area":23.6,"lat":"46°N","lon":"25°E"},{"code":"US","name":"美国","cont":"北美洲","pop":32824,"area":943.9,"lat":"40°N","lon":"99°W"},{"code":"VI","name":"美属维尔京群岛","cont":"北美洲","pop":11,"area":0.0,"lat":"18°N","lon":"65°W"},{"code":"AS","name":"美属萨摩亚","cont":"大洋洲","pop":6,"area":0.0,"lat":"14°S","lon":"171°W"},{"code":"LA","name":"老挝","cont":"亚洲","pop":717,"area":22.9,"lat":"19°N","lon":"104°E"},{"code":"KE","name":"肯尼亚","cont":"非洲","pop":5257,"area":59.5,"lat":"1°N","lon":"38°E"},{"code":"FI","name":"芬兰","cont":"欧洲","pop":552,"area":33.0,"lat":"65°N","lon":"26°E"},{"code":"SD","name":"苏丹","cont":"非洲","pop":4281,"area":186.3,"lat":"16°N","lon":"30°E"},{"code":"SR","name":"苏里南","cont":"南美洲","pop":58,"area":14.6,"lat":"4°N","lon":"56°W"},{"code":"GB","name":"英国","cont":"欧洲","pop":6683,"area":24.0,"lat":"54°N","lon":"3°W"},{"code":"IO","name":"英属印度洋领地","cont":"非洲","pop":0,"area":0.0,"lat":"7°S","lon":"72°E"},{"code":"VG","name":"英属维尔京群岛","cont":"北美洲","pop":3,"area":0.0,"lat":"18°N","lon":"65°W"},{"code":"NL","name":"荷兰","cont":"欧洲","pop":1733,"area":3.7,"lat":"52°N","lon":"6°E"},{"code":"SX","name":"荷属圣马丁","cont":"北美洲","pop":4,"area":0.0,"lat":"18°N","lon":"63°W"},{"code":"MZ","name":"莫桑比克","cont":"非洲","pop":3037,"area":79.1,"lat":"17°S","lon":"36°E"},{"code":"LS","name":"莱索托","cont":"非洲","pop":213,"area":3.0,"lat":"30°S","lon":"28°E"},{"code":"PH","name":"菲律宾","cont":"亚洲","pop":10812,"area":29.0,"lat":"16°N","lon":"121°E"},{"code":"SV","name":"萨尔瓦多","cont":"北美洲","pop":645,"area":2.0,"lat":"14°N","lon":"89°W"},{"code":"WS","name":"萨摩亚","cont":"大洋洲","pop":20,"area":0.3,"lat":"14°S","lon":"172°W"},{"code":"PT","name":"葡萄牙","cont":"欧洲","pop":1027,"area":9.1,"lat":"40°N","lon":"8°W"},{"code":"MN","name":"蒙古国","cont":"亚洲","pop":323,"area":156.0,"lat":"47°N","lon":"103°E"},{"code":"MS","name":"蒙特塞拉特","cont":"北美洲","pop":0,"area":0.0,"lat":"17°N","lon":"62°W"},{"code":"EH","name":"西撒哈拉","cont":"非洲","pop":60,"area":9.1,"lat":"24°N","lon":"12°W"},{"code":"ES","name":"西班牙","cont":"欧洲","pop":4708,"area":50.6,"lat":"40°N","lon":"4°W"},{"code":"NF","name":"诺福克岛","cont":"大洋洲","pop":0,"area":0.0,"lat":"29°S","lon":"168°E"},{"code":"BJ","name":"贝宁","cont":"非洲","pop":1180,"area":11.7,"lat":"10°N","lon":"2°E"},{"code":"ZM","name":"赞比亚","cont":"非洲","pop":1786,"area":75.6,"lat":"13°S","lon":"28°E"},{"code":"GQ","name":"赤道几内亚","cont":"非洲","pop":136,"area":2.7,"lat":"2°N","lon":"10°E"},{"code":"HM","name":"赫德岛和麦克唐纳群岛","cont":"大洋洲","pop":0,"area":0.0,"lat":"53°S","lon":"74°E"},{"code":"VN","name":"越南","cont":"亚洲","pop":9646,"area":32.9,"lat":"17°N","lon":"106°E"},{"code":"","name":"锡亚琴冰川","cont":"亚洲","pop":1,"area":0.2,"lat":"35°N","lon":"77°E"},{"code":"AU","name":"阿什莫尔和卡捷群岛","cont":"大洋洲","pop":0,"area":0.0,"lat":"12°S","lon":"124°E"},{"code":"AZ","name":"阿塞拜疆","cont":"亚洲","pop":1002,"area":8.6,"lat":"40°N","lon":"48°E"},{"code":"AF","name":"阿富汗","cont":"亚洲","pop":3804,"area":64.2,"lat":"34°N","lon":"66°E"},{"code":"DZ","name":"阿尔及利亚","cont":"非洲","pop":4305,"area":232.3,"lat":"28°N","lon":"3°E"},{"code":"AL","name":"阿尔巴尼亚","cont":"欧洲","pop":285,"area":2.8,"lat":"41°N","lon":"20°E"},{"code":"AE","name":"阿拉伯联合酋长国","cont":"亚洲","pop":977,"area":7.1,"lat":"24°N","lon":"54°E"},{"code":"OM","name":"阿曼","cont":"亚洲","pop":497,"area":31.2,"lat":"21°N","lon":"56°E"},{"code":"AR","name":"阿根廷","cont":"南美洲","pop":4494,"area":278.3,"lat":"35°S","lon":"65°W"},{"code":"AW","name":"阿鲁巴","cont":"北美洲","pop":11,"area":0.0,"lat":"13°N","lon":"70°W"},{"code":"CN-HK","name":"中国-香港","cont":"亚洲","pop":751,"area":0.1,"lat":"22°N","lon":"114°E"},{"code":"MV","name":"马尔代夫","cont":"亚洲","pop":53,"area":0.0,"lat":"3°N","lon":"73°E"},{"code":"IM","name":"马恩岛","cont":"欧洲","pop":8,"area":0.1,"lat":"54°N","lon":"5°W"},{"code":"MW","name":"马拉维","cont":"非洲","pop":1863,"area":12.0,"lat":"13°S","lon":"34°E"},{"code":"MY","name":"马来西亚","cont":"亚洲","pop":3195,"area":32.8,"lat":"4°N","lon":"115°E"},{"code":"MH","name":"马绍尔群岛","cont":"大洋洲","pop":6,"area":0.0,"lat":"7°N","lon":"171°E"},{"code":"MT","name":"马耳他","cont":"欧洲","pop":50,"area":0.0,"lat":"36°N","lon":"14°E"},{"code":"MG","name":"马达加斯加","cont":"非洲","pop":2697,"area":59.5,"lat":"19°S","lon":"47°E"},{"code":"ML","name":"马里","cont":"非洲","pop":1966,"area":125.8,"lat":"17°N","lon":"4°W"},{"code":"LB","name":"黎巴嫩","cont":"亚洲","pop":686,"area":1.0,"lat":"34°N","lon":"36°E"},{"code":"ME","name":"黑山","cont":"欧洲","pop":62,"area":1.4,"lat":"43°N","lon":"19°E"}];
+var CONT_ITEMS = ['亚洲','欧洲','北美洲','南美洲','大洋洲','非洲'];
+var ORG_ITEMS = ['上海合作组织','金砖国家','北约','欧盟','二十国集团','七国集团','东盟','阿拉伯国家联盟'];
+var MAP_ITEMS = ['模拟地图','卫星影像','政治区划','人口着色','经济着色'];
+var SORT_ITEMS = [['area','面积'],['pop','人口'],['name','名称']];
+
+var state = {
+  tab:'countries', conts:new Set(['全部']), orgs:new Set(),
+  sort:'area', q:'', open:new Set(['亚洲']), sel:'CN',
+  mapType:0, fs:false, zoom:5, settings:false
+};
+
+function fmtPop(w){ return w >= 10000 ? (w/10000).toFixed(1) + '亿' : w + '万'; }
+function fmtArea(a){
+  if(a >= 1){ var v = Math.round(a*10)/10; return v + '万 km²'; }
+  return Math.round(a*10000) + ' km²';
+}
+function idOf(d){ return d.code || ('#' + d.name); }
+
+function cmpCode(a, b){
+  var ka = a.code || '\uffff' + a.name, kb = b.code || '\uffff' + b.name;
+  return ka < kb ? -1 : (ka > kb ? 1 : 0);
+}
+function sortRows(rows){
+  var arr = rows.slice();
+  if(state.q.trim()){ arr.sort(cmpCode); }  // 搜索激活：按二字码排序（同前缀国家相邻，如 CN 系）
+  else if(state.sort === 'name'){ arr.sort(cmpCode); }
+  else if(state.sort === 'pop'){ arr.sort(function(a,b){ return b.pop - a.pop || cmpCode(a,b); }); }
+  else { arr.sort(function(a,b){ return b.area - a.area || cmpCode(a,b); }); }
+  return arr;
+}
+
+/* ===== 国家页签：手风琴列表渲染 ===== */
+function renderList(){
+  var root = $('#clist');
+  root.innerHTML = '';
+  var q = state.q.trim().toLowerCase();
+  var contFilter = state.conts.has('全部') || state.conts.size === 0 ? null : state.conts;  // 「全部」= 全球，不筛选
+  var total = 0;
+  for(var gi = 0; gi < GROUPS.length; gi++){
+    var g = GROUPS[gi];
+    if(contFilter && !contFilter.has(g)){ continue; }
+    var all = DATA.filter(function(d){ return d.cont === g; });
+    var rows = sortRows(all);
+    if(q){
+      rows = rows.filter(function(d){
+        return d.name.toLowerCase().indexOf(q) !== -1 || d.code.toLowerCase().indexOf(q) !== -1;
+      });
+    }
+    if(!rows.length){ continue; }
+    var coded = q ? rows.length : all.filter(function(d){ return /^[A-Z]{2}$/.test(d.code); }).length;
+    total += rows.length;
+    var exp = q ? true : state.open.has(g);
+    var gh = document.createElement('div');
+    gh.className = 'ghead' + (exp ? ' exp' : '');
+    gh.dataset.g = g;
+    gh.innerHTML = '<span class="gtitle">' + g + '</span>'
+      + '<span class="gcount">' + coded + ' 国</span>'
+      + '<span class="garrow">' + (exp ? '▾' : '▸') + '</span>';
+    root.appendChild(gh);
+    if(!exp){ continue; }
+    for(var ri = 0; ri < rows.length; ri++){
+      var d = rows[ri];
+      var sel = state.sel === idOf(d);
+      var row = document.createElement('div');
+      row.className = 'crow' + (sel ? ' sel' : '');
+      row.dataset.id = idOf(d);
+      var html = '<div class="crmain"><span class="ccode">' + d.code + '</span>'
+        + '<span class="cname">' + d.name + '</span>'
+        + '<span class="cpop">' + fmtPop(d.pop) + '</span></div>';
+      if(sel){
+        html += '<div class="cdetail">'
+          + '<div>大小 ' + fmtArea(d.area) + ' · 人口 ' + fmtPop(d.pop) + '</div>'
+          + '<div>位置 ' + d.lat + ' / ' + d.lon + ' · ' + d.cont + '</div></div>';
+      }
+      row.innerHTML = html;
+      root.appendChild(row);
+    }
+  }
+  if(!total){
+    var e = document.createElement('div');
+    e.className = 'cempty';
+    e.textContent = '无匹配国家';
+    root.appendChild(e);
+  }
+}
+
+$('#clist').addEventListener('click', function(ev){
+  var gh = ev.target.closest('.ghead');
+  if(gh){
+    var g = gh.dataset.g;
+    if(state.open.has(g)){ state.open.delete(g); } else { state.open.add(g); }
+    renderList();
+    return;
+  }
+  var cr = ev.target.closest('.crow');
+  if(cr){
+    var id = cr.dataset.id;
+    state.sel = (state.sel === id) ? null : id;
+    renderList();
+  }
+});
+
+/* ===== 通用单选 chips（机位 / 排序） ===== */
+function buildChips(el, items, getFn, setFn){
+  function paint(){
+    var kids = el.children;
+    for(var i = 0; i < kids.length; i++){
+      kids[i].classList.toggle('active', kids[i].dataset.v === getFn());
+    }
+  }
+  items.forEach(function(it){
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'chip';
+    b.textContent = it[1];
+    b.dataset.v = it[0];
+    b.addEventListener('click', function(){ setFn(it[0]); paint(); });
+    el.appendChild(b);
+  });
+  paint();
+}
+buildChips($('#sortChips'), SORT_ITEMS,
+  function(){ return state.sort; }, function(v){ state.sort = v; renderList(); });
+
+/* ===== 多选下拉（大洲 / 组织） ===== */
+function closeAllDd(){
+  var open = document.querySelectorAll('.dd.open');
+  for(var i = 0; i < open.length; i++){ open[i].classList.remove('open'); }
+}
+function buildDd(rootSel, items, setRef){
+  var withAll = rootSel === '#ddCont';  // 大洲下拉首项「全部」：代替全球视角，与其他项互斥
+  var root = $(rootSel);
+  var label = root.querySelector('.ddlabel');
+  var pop = root.querySelector('.ddpop');
+  if(withAll){
+    var all = document.createElement('div');
+    all.className = 'ditem';
+    all.dataset.v = '全部';
+    all.innerHTML = '<span class="tick">✓</span><span>全部</span>';
+    all.addEventListener('click', function(){
+      if(!(setRef.has('全部') && setRef.size === 1)){ setRef.clear(); setRef.add('全部'); paint(); }
+    });
+    pop.appendChild(all);
+  }
+  items.forEach(function(it){
+    var d = document.createElement('div');
+    d.className = 'ditem';
+    d.dataset.v = it;
+    d.innerHTML = '<span class="tick">✓</span><span>' + it + '</span>';
+    d.addEventListener('click', function(){
+      if(withAll && it === '全部'){
+        if(!(setRef.has('全部') && setRef.size === 1)){ setRef.clear(); setRef.add('全部'); }
+      } else if(withAll && setRef.has('全部')){
+        setRef.clear(); setRef.add(it);
+      } else if(setRef.has(it)){ setRef.delete(it); } else { setRef.add(it); }
+      paint();
+    });
+    pop.appendChild(d);
+  });
+  var clearBtn = root.querySelector('.ddclear');
+  clearBtn.addEventListener('click', function(e){
+    e.stopPropagation();
+    if(withAll){ setRef.clear(); setRef.add('全部'); }
+    else { setRef.clear(); }
+    paint();
+  });
+  root.querySelector('.ddbox').addEventListener('click', function(){
+    var was = root.classList.contains('open');
+    closeAllDd();
+    if(!was){ root.classList.add('open'); }
+  });
+  function paint(){
+    var sel = items.filter(function(x){ return setRef.has(x); });
+    if(withAll && setRef.has('全部')){ sel = ['全部']; }
+    if(sel.length === 0){ label.textContent = root.dataset.ph; }
+    else if(sel.length === 1){ label.textContent = sel[0]; }
+    else { label.textContent = sel[0] + ' 等 ' + sel.length + ' 项'; }
+    var hasSel = withAll ? !(setRef.size === 1 && setRef.has('全部')) && setRef.size > 0 : sel.length > 0;
+    root.classList.toggle('has', hasSel);
+    var kids = pop.children;
+    for(var i = 0; i < kids.length; i++){
+      kids[i].classList.toggle('on', setRef.has(kids[i].dataset.v));
+    }
+  }
+  paint();
+}
+buildDd('#ddCont', CONT_ITEMS, state.conts);
+buildDd('#ddOrg', ORG_ITEMS, state.orgs);
+
+/* ===== 页签切换 ===== */
+var tabs = document.querySelectorAll('.tab');
+for(var ti = 0; ti < tabs.length; ti++){
+  tabs[ti].addEventListener('click', function(){
+    state.tab = this.dataset.tab;
+    for(var i = 0; i < tabs.length; i++){ tabs[i].classList.toggle('active', tabs[i] === this); }
+    $('#paneSelected').classList.toggle('hide', state.tab !== 'selected');
+    $('#paneCountries').classList.toggle('hide', state.tab !== 'countries');
+  });
+}
+
+/* ===== 设置面板开合 + 全屏联动 ===== */
+var settingsEl = $('#settings'), gearBtn = $('#gearBtn');
+/* 面板收起 / 展开（动画：滑出右侧，收起后仅剩右缘把手按钮） */
+var cpanelEl = $('.cpanel'), cexpandEl = $('#cexpand');
+function setCollapsed(v){
+  state.collapsed = v;
+  cpanelEl.classList.toggle('collapsed', v);
+  cexpandEl.classList.toggle('hide', !v);
+}
+var ccBtn = document.querySelector('.ccollapse');
+if(ccBtn){ ccBtn.addEventListener('click', function(){ setCollapsed(true); }); }
+cexpandEl.addEventListener('click', function(){ setCollapsed(false); });
+function setSettings(v){ state.settings = v; settingsEl.classList.toggle('hide', !v); }
+gearBtn.addEventListener('click', function(){ setSettings(!state.settings); });
+$('#backRow').addEventListener('click', function(){ setSettings(false); });
+
+function setFs(v){
+  state.fs = v;
+  $('#fsSwitch').classList.toggle('on', v);
+}
+$('#fsSwitch').addEventListener('click', function(){ setFs(!state.fs); });
+
+/* ===== 地图类型单选 ===== */
+var mtWrap = $('#mapTypes');
+MAP_ITEMS.forEach(function(m, i){
+  var r = document.createElement('div');
+  r.className = 'set-row mrow';
+  r.innerHTML = '<span>' + m + '</span><span class="mdot"></span>';
+  r.addEventListener('click', function(){ state.mapType = i; paintMt(); });
+  mtWrap.appendChild(r);
+});
+function paintMt(){
+  var kids = mtWrap.children;
+  for(var i = 0; i < kids.length; i++){ kids[i].classList.toggle('sel', i === state.mapType); }
+}
+paintMt();
+
+/* ===== 搜索过滤（实时作用于「国家」页签列表） ===== */
+$('#search').addEventListener('input', function(e){
+  state.q = e.target.value;
+  renderList();
+});
+
+/* ===== 缩放滑块（10 刻度，点轨道 / ± 步进） ===== */
+var ztrack = $('#ztrack'), zthumb = $('#zthumb'), ticksWrap = $('#zticks');
+var T0 = 4, T1 = 84, TSTEP = (T1 - T0) / 9;
+for(var i = 0; i < 10; i++){
+  var s = document.createElement('span');
+  s.className = 'ztick';
+  s.style.left = (T0 + i * TSTEP - 0.5) + 'px';
+  ticksWrap.appendChild(s);
+}
+function setZoom(v){
+  state.zoom = Math.max(0, Math.min(9, v));
+  zthumb.style.left = (T0 + state.zoom * TSTEP) + 'px';
+  var kids = ticksWrap.children;
+  for(var k = 0; k < kids.length; k++){ kids[k].classList.toggle('on', k <= state.zoom); }
+}
+ztrack.addEventListener('click', function(e){
+  var r = ztrack.getBoundingClientRect();
+  setZoom(Math.round((e.clientX - r.left - T0) / TSTEP));
+});
+$('#zoomOut').addEventListener('click', function(){ setZoom(state.zoom - 1); });
+$('#zoomIn').addEventListener('click', function(){ setZoom(state.zoom + 1); });
+setZoom(state.zoom);
+
+/* ===== 点面板外收起（设置面板 / 下拉） ===== */
+document.addEventListener('click', function(e){
+  var t = e.target;
+  if(state.settings && !settingsEl.contains(t) && !gearBtn.contains(t)){ setSettings(false); }
+  if(!t.closest('.dd')){ closeAllDd(); }
+});
+
+/* 初始渲染 */
+renderList();
+
+/* 画布自适应：窗口小于 1600×900 时整体等比缩小（设计坐标不变，右侧面板始终完整可见） */
+  (function () {
+    var canvasEl = document.getElementById('canvas');
+    var info = document.getElementById('fitInfo');
+    var DESIGN_W = 1600, DESIGN_H = 900, HEAD = 110, MARGIN = 32;
+    function fit() {
+      var aw = window.innerWidth - MARGIN;
+      var ah = window.innerHeight - HEAD - MARGIN;
+      var scale = Math.min(1, aw / DESIGN_W, ah / DESIGN_H);
+      if (scale < 1) {
+        canvasEl.style.transform = 'scale(' + scale + ')';
+        canvasEl.style.marginBottom = (-(DESIGN_H * (1 - scale))) + 'px';
+        document.body.style.overflowX = 'hidden';
+        info.textContent = '已缩放 ' + Math.round(scale * 100) + '%（设计稿 1600×900）';
+      } else {
+        canvasEl.style.transform = '';
+        canvasEl.style.marginBottom = '';
+        document.body.style.overflowX = '';
+        info.textContent = '原始尺寸 1600×900';
+      }
+    }
+    window.addEventListener('resize', fit);
+    fit();
+  })();
+})();
+</script>
+</body>
+</html>

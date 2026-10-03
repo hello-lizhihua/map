@@ -1,0 +1,7 @@
+.godot/
+screenshots/
+.DS_Store
+node_modules/
+addons/godot-element-plus
+docs/.vitepress/dist/
+docs/.vitepress/cache/

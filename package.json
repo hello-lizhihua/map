@@ -1,0 +1,9 @@
+{
+  "name": "map",
+  "private": true,
+  "scripts": {
+    "dev": "godot --path .",
+    "shots": "godot --path . --position -3200,-3200 res://tools/earth_screenshot.tscn",
+    "test": "godot --headless --path . -s res://tests/earth_test.gd"
+  }
+}
